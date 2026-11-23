@@ -1,0 +1,16 @@
+[package]
+name = "petrotechnics-api"
+version = "1.0.0"
+edition = "2021"
+description = "High-performance Rust (Axum) REST API backend for PetroTechnics international petrochemical trading platform (petrotechnic.co)."
+
+[dependencies]
+axum = "0.7"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.40", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1.10", features = ["v4"] }

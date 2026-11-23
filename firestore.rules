@@ -1,0 +1,662 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 4.1: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Global Hardened Helpers
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedSuperAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'ghaderi.sabir@gmail.com';
+    }
+
+    function isAdminDocActive(uid) {
+      return exists(/databases/$(database)/documents/admins/$(uid))
+        && get(/databases/$(database)/documents/admins/$(uid)).data.status == 'active';
+    }
+
+    function adminDocData() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+    }
+
+    function hasAdminPermission(permKey) {
+      return isBootstrappedSuperAdmin()
+        || (isVerifiedUser()
+          && isAdminDocActive(request.auth.uid)
+          && (
+            adminDocData().role == 'superadmin'
+            || ('permissions' in adminDocData()
+              && permKey in adminDocData().permissions
+              && adminDocData().permissions[permKey] == true)
+          ));
+    }
+
+    function isSuperAdmin() {
+      return hasAdminPermission('manageRoles');
+    }
+
+    function isLocalizedMap(m, maxLen) {
+      return m is map
+        && m.keys().hasAll(['en', 'fa', 'ar'])
+        && m.keys().hasOnly(['en', 'fa', 'ar'])
+        && m.en is string && m.en.size() >= 1 && m.en.size() <= maxLen
+        && m.fa is string && m.fa.size() >= 1 && m.fa.size() <= maxLen
+        && m.ar is string && m.ar.size() >= 1 && m.ar.size() <= maxLen;
+    }
+
+    function isValidPermissionsMap(p) {
+      return p is map
+        && p.keys().hasAll([
+          'viewOverview', 'viewProducts', 'editProductsPricing', 'viewRfqs',
+          'manageRfqs', 'viewMarket', 'editMarket', 'viewDocuments',
+          'manageDocuments', 'editSettings', 'manageRoles', 'deleteRecords'
+        ])
+        && p.keys().hasOnly([
+          'viewOverview', 'viewProducts', 'editProductsPricing', 'viewRfqs',
+          'manageRfqs', 'viewMarket', 'editMarket', 'viewDocuments',
+          'manageDocuments', 'editSettings', 'manageRoles', 'deleteRecords'
+        ])
+        && p.viewOverview is bool
+        && p.viewProducts is bool
+        && p.editProductsPricing is bool
+        && p.viewRfqs is bool
+        && p.manageRfqs is bool
+        && p.viewMarket is bool
+        && p.editMarket is bool
+        && p.viewDocuments is bool
+        && p.manageDocuments is bool
+        && p.editSettings is bool
+        && p.manageRoles is bool
+        && p.deleteRecords is bool;
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Blueprints (Pillar 2: Anti-Update-Gap)
+    // -------------------------------------------------------------------------
+    function isValidRoleDefinition(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'description', 'baseTier', 'isSystem',
+          'permissions', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'name', 'description', 'baseTier', 'isSystem',
+          'permissions', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 80
+        && data.description is string && data.description.size() >= 2 && data.description.size() <= 300
+        && data.baseTier in ['superadmin', 'editor', 'desk_agent', 'analyst']
+        && data.isSystem is bool
+        && isValidPermissionsMap(data.permissions)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'displayName', 'role', 'roleId', 'roleName',
+          'permissions', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'role', 'roleId', 'roleName',
+          'permissions', 'status', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.role in ['superadmin', 'editor', 'desk_agent', 'analyst']
+        && isValidId(data.roleId)
+        && data.roleName is string && data.roleName.size() >= 2 && data.roleName.size() <= 80
+        && isValidPermissionsMap(data.permissions)
+        && data.status in ['active', 'disabled']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+          'slug', 'category', 'shortName', 'formula', 'casNumber', 'hsCode',
+          'moqMt', 'fobUsdMt', 'image', 'featured', 'name', 'summary', 'overview',
+          'grades', 'specs', 'applications', 'packaging', 'loadingPorts', 'inspections', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'slug', 'category', 'shortName', 'formula', 'casNumber', 'hsCode',
+          'moqMt', 'fobUsdMt', 'image', 'featured', 'name', 'summary', 'overview',
+          'grades', 'specs', 'applications', 'packaging', 'loadingPorts', 'inspections', 'updatedAt'
+        ])
+        && isValidId(data.slug)
+        && data.category in ['polymers', 'fertilizers', 'chemicals']
+        && data.shortName is string && data.shortName.size() >= 1 && data.shortName.size() <= 80
+        && data.formula is string && data.formula.size() >= 1 && data.formula.size() <= 64
+        && data.casNumber is string && data.casNumber.size() >= 2 && data.casNumber.size() <= 40
+        && data.hsCode is string && data.hsCode.size() >= 4 && data.hsCode.size() <= 24
+        && data.moqMt is number && data.moqMt > 0 && data.moqMt <= 1000000
+        && data.fobUsdMt is number && data.fobUsdMt > 0 && data.fobUsdMt <= 100000
+        && data.image is string && data.image.size() >= 1 && data.image.size() <= 300
+        && data.featured is bool
+        && isLocalizedMap(data.name, 160)
+        && isLocalizedMap(data.summary, 600)
+        && isLocalizedMap(data.overview, 2000)
+        && data.grades is list && data.grades.size() >= 1 && data.grades.size() <= 15 && data.grades[0] is map
+        && data.specs is list && data.specs.size() <= 25
+        && data.applications is list && data.applications.size() <= 15
+        && data.packaging is list && data.packaging.size() <= 15
+        && data.loadingPorts is list && data.loadingPorts.size() >= 1 && data.loadingPorts.size() <= 10 && data.loadingPorts[0] is string
+        && data.inspections is list && data.inspections.size() >= 1 && data.inspections.size() <= 5 && data.inspections[0] is string
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidRfq(data) {
+      return data.keys().hasAll([
+          'referenceId', 'productSlug', 'productName', 'grade', 'quantityMt',
+          'destination', 'incoterm', 'packaging', 'inspection', 'currency',
+          'estimatedUnitPrice', 'estimatedTotal', 'companyName', 'contactName',
+          'email', 'phone', 'notes', 'status', 'deskNotes', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'referenceId', 'productSlug', 'productName', 'grade', 'quantityMt',
+          'destination', 'incoterm', 'packaging', 'inspection', 'currency',
+          'estimatedUnitPrice', 'estimatedTotal', 'companyName', 'contactName',
+          'email', 'phone', 'notes', 'status', 'deskNotes', 'createdAt', 'updatedAt',
+          'buyerUid', 'fulfillmentStage', 'vesselName', 'blNumber', 'portOfLoading',
+          'etaDate', 'buyerNotice'
+        ])
+        && isValidId(data.referenceId)
+        && data.productSlug is string && data.productSlug.size() >= 1 && data.productSlug.size() <= 64
+        && data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 160
+        && data.grade is string && data.grade.size() >= 1 && data.grade.size() <= 120
+        && data.quantityMt is number && data.quantityMt > 0 && data.quantityMt <= 5000000
+        && data.destination is string && data.destination.size() >= 2 && data.destination.size() <= 160
+        && data.incoterm in ['FOB', 'CFR', 'CIF', 'FCA', 'CPT', 'DAP']
+        && data.packaging is string && data.packaging.size() >= 1 && data.packaging.size() <= 160
+        && data.inspection in ['SGS', 'Bureau Veritas', 'Intertek']
+        && data.currency in ['USD', 'EUR', 'AED']
+        && data.estimatedUnitPrice is number && data.estimatedUnitPrice >= 0 && data.estimatedUnitPrice <= 1000000
+        && data.estimatedTotal is number && data.estimatedTotal >= 0 && data.estimatedTotal <= 10000000000
+        && data.companyName is string && data.companyName.size() >= 1 && data.companyName.size() <= 160
+        && data.contactName is string && data.contactName.size() >= 1 && data.contactName.size() <= 120
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160 && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.phone is string && data.phone.size() >= 4 && data.phone.size() <= 40
+        && data.notes is string && data.notes.size() <= 2000
+        && data.status in ['received', 'reviewing', 'quoted', 'contracted', 'archived']
+        && data.deskNotes is string && data.deskNotes.size() <= 2000
+        && (!('buyerUid' in data) || isValidId(data.buyerUid))
+        && (!('fulfillmentStage' in data) || data.fulfillmentStage in ['allocation', 'lc_opened', 'sgs_inspection', 'port_loading', 'in_transit', 'delivered'])
+        && (!('vesselName' in data) || (data.vesselName is string && data.vesselName.size() <= 120))
+        && (!('blNumber' in data) || (data.blNumber is string && data.blNumber.size() <= 80))
+        && (!('portOfLoading' in data) || (data.portOfLoading is string && data.portOfLoading.size() <= 120))
+        && (!('etaDate' in data) || (data.etaDate is string && data.etaDate.size() <= 40))
+        && (!('buyerNotice' in data) || (data.buyerNotice is string && data.buyerNotice.size() <= 1000))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidInsight(data) {
+      return data.keys().hasAll([
+          'slug', 'category', 'categoryLabel', 'date', 'readTimeMinutes',
+          'image', 'title', 'excerpt', 'sections', 'published', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'slug', 'category', 'categoryLabel', 'date', 'readTimeMinutes',
+          'image', 'title', 'excerpt', 'sections', 'published', 'updatedAt'
+        ])
+        && isValidId(data.slug)
+        && data.category in ['fertilizers', 'polymers', 'finance', 'logistics']
+        && isLocalizedMap(data.categoryLabel, 64)
+        && data.date is string && data.date.size() >= 4 && data.date.size() <= 24
+        && data.readTimeMinutes is number && data.readTimeMinutes >= 1 && data.readTimeMinutes <= 60
+        && data.image is string && data.image.size() >= 1 && data.image.size() <= 300
+        && isLocalizedMap(data.title, 200)
+        && isLocalizedMap(data.excerpt, 600)
+        && data.sections is list && data.sections.size() >= 1 && data.sections.size() <= 12 && data.sections[0] is map
+        && data.published is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidHistoricalPrice(data) {
+      return data.keys().hasAll(['id', 'month', 'sortOrder', 'urea', 'hdpe', 'pp', 'methanol', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'month', 'sortOrder', 'urea', 'hdpe', 'pp', 'methanol', 'updatedAt'])
+        && isValidId(data.id)
+        && data.month is string && data.month.size() >= 3 && data.month.size() <= 24
+        && data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000
+        && data.urea is number && data.urea > 0 && data.urea <= 20000
+        && data.hdpe is number && data.hdpe > 0 && data.hdpe <= 20000
+        && data.pp is number && data.pp > 0 && data.pp <= 20000
+        && data.methanol is number && data.methanol > 0 && data.methanol <= 20000
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCorridor(data) {
+      return data.keys().hasAll([
+          'id', 'modeCode', 'region', 'mode', 'loadingPorts', 'destinations',
+          'transitDays', 'commodities', 'summary', 'originPoint', 'targetPoint',
+          'curveControl', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'modeCode', 'region', 'mode', 'loadingPorts', 'destinations',
+          'transitDays', 'commodities', 'summary', 'originPoint', 'targetPoint',
+          'curveControl', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.modeCode in ['maritime', 'caspian', 'overland', 'gulf']
+        && isLocalizedMap(data.region, 120)
+        && isLocalizedMap(data.mode, 120)
+        && data.loadingPorts is list && data.loadingPorts.size() >= 1 && data.loadingPorts.size() <= 10 && data.loadingPorts[0] is string
+        && data.destinations is list && data.destinations.size() >= 1 && data.destinations.size() <= 15 && data.destinations[0] is map
+        && data.transitDays is string && data.transitDays.size() >= 1 && data.transitDays.size() <= 32
+        && data.commodities is list && data.commodities.size() >= 1 && data.commodities.size() <= 15 && data.commodities[0] is string
+        && isLocalizedMap(data.summary, 600)
+        && data.originPoint is map && data.targetPoint is map && data.curveControl is map
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDocumentTemplate(data) {
+      return data.keys().hasAll([
+          'id', 'code', 'category', 'revision', 'sha256', 'stageRef',
+          'issuer', 'title', 'summary', 'documentTitleEn', 'subtitleEn',
+          'metadata', 'tableHeaders', 'lineItems', 'clauses', 'signatory', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'code', 'category', 'revision', 'sha256', 'stageRef',
+          'issuer', 'title', 'summary', 'documentTitleEn', 'subtitleEn',
+          'metadata', 'tableHeaders', 'lineItems', 'clauses', 'signatory', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.code is string && data.code.size() >= 3 && data.code.size() <= 40
+        && data.category in ['commercial', 'shipping', 'inspection']
+        && data.revision is string && data.revision.size() >= 2 && data.revision.size() <= 32
+        && data.sha256 is string && data.sha256.size() >= 16 && data.sha256.size() <= 64
+        && data.stageRef is string && data.stageRef.size() >= 2 && data.stageRef.size() <= 64
+        && isLocalizedMap(data.issuer, 120)
+        && isLocalizedMap(data.title, 160)
+        && isLocalizedMap(data.summary, 600)
+        && data.documentTitleEn is string && data.documentTitleEn.size() >= 2 && data.documentTitleEn.size() <= 120
+        && data.subtitleEn is string && data.subtitleEn.size() >= 2 && data.subtitleEn.size() <= 180
+        && data.metadata is list && data.metadata.size() >= 1 && data.metadata.size() <= 20 && data.metadata[0] is map
+        && data.tableHeaders is list && data.tableHeaders.size() == 5 && data.tableHeaders[0] is string
+        && data.lineItems is list && data.lineItems.size() >= 1 && data.lineItems.size() <= 20 && data.lineItems[0] is map
+        && data.clauses is list && data.clauses.size() >= 1 && data.clauses.size() <= 15 && data.clauses[0] is string
+        && data.signatory is string && data.signatory.size() >= 2 && data.signatory.size() <= 160
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDocAccessLog(data) {
+      return data.keys().hasAll(['token', 'company', 'email', 'status', 'verifiedAt', 'updatedAt'])
+        && data.keys().hasOnly(['token', 'company', 'email', 'status', 'verifiedAt', 'updatedAt'])
+        && isValidId(data.token)
+        && data.company is string && data.company.size() >= 2 && data.company.size() <= 160
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160 && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.status in ['active', 'revoked']
+        && data.verifiedAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVaultRevocation(data) {
+      return data.keys().hasAll(['token', 'revoked', 'revokedAt'])
+        && data.keys().hasOnly(['token', 'revoked', 'revokedAt'])
+        && isValidId(data.token)
+        && data.revoked is bool
+        && data.revokedAt is timestamp;
+    }
+
+    function isValidPlatformSettings(data) {
+      return data.keys().hasAll(['fxRates', 'incotermDeltas', 'regionalDesks', 'faqs', 'updatedAt'])
+        && data.keys().hasOnly(['fxRates', 'incotermDeltas', 'regionalDesks', 'faqs', 'updatedAt'])
+        && data.fxRates is map
+        && data.fxRates.keys().hasAll(['USD', 'EUR', 'AED'])
+        && data.fxRates.keys().hasOnly(['USD', 'EUR', 'AED'])
+        && data.fxRates.USD is number && data.fxRates.USD > 0 && data.fxRates.USD <= 100
+        && data.fxRates.EUR is number && data.fxRates.EUR > 0 && data.fxRates.EUR <= 100
+        && data.fxRates.AED is number && data.fxRates.AED > 0 && data.fxRates.AED <= 100
+        && data.incotermDeltas is map
+        && data.incotermDeltas.keys().hasAll(['FOB', 'CFR', 'CIF', 'FCA', 'CPT', 'DAP'])
+        && data.incotermDeltas.keys().hasOnly(['FOB', 'CFR', 'CIF', 'FCA', 'CPT', 'DAP'])
+        && data.incotermDeltas.FOB is number && data.incotermDeltas.FOB >= 0 && data.incotermDeltas.FOB <= 5000
+        && data.incotermDeltas.CFR is number && data.incotermDeltas.CFR >= 0 && data.incotermDeltas.CFR <= 5000
+        && data.incotermDeltas.CIF is number && data.incotermDeltas.CIF >= 0 && data.incotermDeltas.CIF <= 5000
+        && data.incotermDeltas.FCA is number && data.incotermDeltas.FCA >= 0 && data.incotermDeltas.FCA <= 5000
+        && data.incotermDeltas.CPT is number && data.incotermDeltas.CPT >= 0 && data.incotermDeltas.CPT <= 5000
+        && data.incotermDeltas.DAP is number && data.incotermDeltas.DAP >= 0 && data.incotermDeltas.DAP <= 5000
+        && data.regionalDesks is list && data.regionalDesks.size() <= 12
+        && data.faqs is list && data.faqs.size() <= 30
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSystemAuditLog(data) {
+      return data.keys().hasAll([
+          'id', 'category', 'action', 'severity', 'targetType', 'targetId',
+          'targetLabel', 'summary', 'changes', 'actorUid', 'actorEmail',
+          'actorName', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'category', 'action', 'severity', 'targetType', 'targetId',
+          'targetLabel', 'summary', 'changes', 'actorUid', 'actorEmail',
+          'actorName', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && data.category in ['pricing', 'catalog', 'rfq', 'market', 'documents', 'roles', 'settings', 'system']
+        && data.action is string && data.action.size() >= 3 && data.action.size() <= 80
+        && data.severity in ['info', 'warning', 'critical']
+        && data.targetType is string && data.targetType.size() >= 2 && data.targetType.size() <= 48
+        && data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128
+        && data.targetLabel is string && data.targetLabel.size() >= 1 && data.targetLabel.size() <= 160
+        && data.summary is string && data.summary.size() >= 4 && data.summary.size() <= 400
+        && data.changes is list && data.changes.size() <= 12 && (data.changes.size() == 0 || data.changes[0] is map)
+        && isValidId(data.actorUid)
+        && data.actorEmail is string && data.actorEmail.size() >= 5 && data.actorEmail.size() <= 160
+        && data.actorName is string && data.actorName.size() >= 1 && data.actorName.size() <= 120
+        && data.createdAt is timestamp;
+    }
+
+    function isValidBuyerProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'companyName', 'contactName', 'phone', 'country',
+          'preferredPort', 'taxOrRegId', 'preferredCurrency', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'companyName', 'contactName', 'phone', 'country',
+          'preferredPort', 'taxOrRegId', 'preferredCurrency', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160 && data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+        && data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 160
+        && data.contactName is string && data.contactName.size() >= 2 && data.contactName.size() <= 120
+        && data.phone is string && data.phone.size() >= 4 && data.phone.size() <= 40
+        && data.country is string && data.country.size() >= 2 && data.country.size() <= 80
+        && data.preferredPort is string && data.preferredPort.size() <= 120
+        && data.taxOrRegId is string && data.taxOrRegId.size() <= 64
+        && data.preferredCurrency in ['USD', 'EUR', 'AED']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules (All 13 Blueprint Collections)
+    // -------------------------------------------------------------------------
+
+    // 1. Granular Role Definitions (Superadmin-managed access level templates)
+    match /role_definitions/{roleId} {
+      allow get: if isValidId(roleId)
+        && isVerifiedUser()
+        && (isBootstrappedSuperAdmin() || isAdminDocActive(request.auth.uid));
+      allow list: if isBootstrappedSuperAdmin();
+      allow create: if isValidId(roleId)
+        && isValidRoleDefinition(incoming())
+        && incoming().id == roleId
+        && (incoming().isSystem == false || roleId == 'superadmin')
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('manageRoles');
+      allow update: if isValidId(roleId)
+        && isValidRoleDefinition(incoming())
+        && incoming().id == existing().id
+        && incoming().isSystem == existing().isSystem
+        && (existing().isSystem == false || (incoming().baseTier == 'superadmin' && incoming().permissions.manageRoles == true))
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'baseTier', 'permissions', 'updatedAt'])
+        && hasAdminPermission('manageRoles');
+      allow delete: if isValidId(roleId)
+        && existing().isSystem == false
+        && hasAdminPermission('manageRoles');
+    }
+
+    // 2. RBAC Admins Directory (Strict PII & Non-Escalation + Granular Permissions)
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isVerifiedUser() && (request.auth.uid == uid || isSuperAdmin());
+      allow list: if isBootstrappedSuperAdmin() || (isVerifiedUser() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(uid)
+        && isValidAdminUser(incoming())
+        && incoming().uid == uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('manageRoles')
+        && existsAfter(/databases/$(database)/documents/role_definitions/$(incoming().roleId));
+      allow update: if isValidId(uid)
+        && isValidAdminUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (request.auth.uid != uid || (incoming().status == 'active' && incoming().permissions.manageRoles == true))
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'email', 'role', 'roleId', 'roleName', 'permissions', 'status', 'updatedAt'
+        ])
+        && hasAdminPermission('manageRoles')
+        && existsAfter(/databases/$(database)/documents/role_definitions/$(incoming().roleId));
+      allow delete: if isValidId(uid) && hasAdminPermission('manageRoles') && request.auth.uid != uid;
+    }
+
+    // 3. Live Petrochemical Product Catalog & FOB Pricing
+    match /products/{productSlug} {
+      allow get: if isValidId(productSlug);
+      allow list: if true;
+      allow create: if isValidId(productSlug)
+        && isValidProduct(incoming())
+        && incoming().slug == productSlug
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editProductsPricing');
+      allow update: if isValidId(productSlug)
+        && isValidProduct(incoming())
+        && incoming().slug == existing().slug
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editProductsPricing');
+      allow delete: if isValidId(productSlug) && hasAdminPermission('deleteRecords');
+    }
+
+    // 4. Confidential Buyer RFQ Inquiries & Shipment Fulfillment (Public Create, Verified Buyer Self-Read, Admin Manage)
+    match /rfq_inquiries/{rfqId} {
+      allow get: if isValidId(rfqId) && (
+        hasAdminPermission('viewRfqs') ||
+        (isVerifiedUser() && existing().email == request.auth.token.email.lower())
+      );
+      allow list: if isBootstrappedSuperAdmin() || (
+        isVerifiedUser() && resource.data.email == request.auth.token.email.lower()
+      );
+      allow create: if isValidId(rfqId)
+        && isValidRfq(incoming())
+        && incoming().referenceId == rfqId
+        && incoming().status == 'received'
+        && incoming().deskNotes == ''
+        && !('fulfillmentStage' in incoming())
+        && !('vesselName' in incoming())
+        && !('blNumber' in incoming())
+        && !('portOfLoading' in incoming())
+        && !('etaDate' in incoming())
+        && !('buyerNotice' in incoming())
+        && (!('buyerUid' in incoming()) || (isVerifiedUser() && incoming().buyerUid == request.auth.uid && incoming().email == request.auth.token.email.lower()))
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(rfqId)
+        && isValidRfq(incoming())
+        && incoming().referenceId == existing().referenceId
+        && incoming().createdAt == existing().createdAt
+        && (!('buyerUid' in existing()) || incoming().buyerUid == existing().buyerUid)
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'deskNotes', 'fulfillmentStage', 'vesselName', 'blNumber',
+          'portOfLoading', 'etaDate', 'buyerNotice', 'updatedAt'
+        ])
+        && hasAdminPermission('manageRfqs');
+      allow delete: if isValidId(rfqId) && hasAdminPermission('deleteRecords');
+    }
+
+    // 5. Trilingual Market Insights
+    match /market_insights/{insightSlug} {
+      allow get: if isValidId(insightSlug) && (existing().published == true || hasAdminPermission('viewMarket'));
+      allow list: if resource.data.published == true || isBootstrappedSuperAdmin();
+      allow create: if isValidId(insightSlug)
+        && isValidInsight(incoming())
+        && incoming().slug == insightSlug
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editMarket');
+      allow update: if isValidId(insightSlug)
+        && isValidInsight(incoming())
+        && incoming().slug == existing().slug
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editMarket');
+      allow delete: if isValidId(insightSlug) && hasAdminPermission('deleteRecords');
+    }
+
+    // 6. Historical FOB Price Benchmark Series (Recharts)
+    match /historical_prices/{priceId} {
+      allow get: if isValidId(priceId);
+      allow list: if true;
+      allow create: if isValidId(priceId)
+        && isValidHistoricalPrice(incoming())
+        && incoming().id == priceId
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editMarket');
+      allow update: if isValidId(priceId)
+        && isValidHistoricalPrice(incoming())
+        && incoming().id == existing().id
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editMarket');
+      allow delete: if isValidId(priceId) && hasAdminPermission('deleteRecords');
+    }
+
+    // 7. Global Trade Corridors (D3 Map)
+    match /trade_corridors/{corridorId} {
+      allow get: if isValidId(corridorId);
+      allow list: if true;
+      allow create: if isValidId(corridorId)
+        && isValidCorridor(incoming())
+        && incoming().id == corridorId
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editMarket');
+      allow update: if isValidId(corridorId)
+        && isValidCorridor(incoming())
+        && incoming().id == existing().id
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editMarket');
+      allow delete: if isValidId(corridorId) && hasAdminPermission('deleteRecords');
+    }
+
+    // 8. Institutional Document Hub Templates
+    match /document_templates/{templateId} {
+      allow get: if isValidId(templateId);
+      allow list: if true;
+      allow create: if isValidId(templateId)
+        && isValidDocumentTemplate(incoming())
+        && incoming().id == templateId
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('manageDocuments');
+      allow update: if isValidId(templateId)
+        && isValidDocumentTemplate(incoming())
+        && incoming().id == existing().id
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('manageDocuments');
+      allow delete: if isValidId(templateId) && hasAdminPermission('deleteRecords');
+    }
+
+    // 9. PII-Protected Document Vault Verification Audit Logs
+    match /document_access_logs/{tokenId} {
+      allow get: if isValidId(tokenId) && hasAdminPermission('viewDocuments');
+      allow list: if isBootstrappedSuperAdmin();
+      allow create: if isValidId(tokenId)
+        && isValidDocAccessLog(incoming())
+        && incoming().token == tokenId
+        && incoming().status == 'active'
+        && incoming().verifiedAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(tokenId)
+        && isValidDocAccessLog(incoming())
+        && incoming().token == existing().token
+        && incoming().verifiedAt == existing().verifiedAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && hasAdminPermission('manageDocuments');
+      allow delete: if isValidId(tokenId) && hasAdminPermission('deleteRecords');
+    }
+
+    // 10. Split-Collection Non-PII Vault Revocation Registry
+    match /vault_revocations/{tokenId} {
+      allow get: if isValidId(tokenId);
+      allow list: if isBootstrappedSuperAdmin();
+      allow create, update: if isValidId(tokenId)
+        && isValidVaultRevocation(incoming())
+        && incoming().token == tokenId
+        && incoming().revokedAt == request.time
+        && hasAdminPermission('manageDocuments');
+      allow delete: if isValidId(tokenId) && hasAdminPermission('manageDocuments');
+    }
+
+    // 11. Live Platform Commercial Settings (FX Rates, Incoterms, Desks, FAQs)
+    match /platform_settings/{settingKey} {
+      allow get: if settingKey == 'global';
+      allow list: if false;
+      allow create, update: if settingKey == 'global'
+        && isValidPlatformSettings(incoming())
+        && incoming().updatedAt == request.time
+        && hasAdminPermission('editSettings');
+      allow delete: if false;
+    }
+
+    // 12. Immutable Append-Only System Audit Logs (Strict Identity & Tamper-Proof)
+    match /system_audit_logs/{logId} {
+      allow get: if isValidId(logId)
+        && (hasAdminPermission('manageRoles') || hasAdminPermission('viewOverview'));
+      allow list: if isBootstrappedSuperAdmin();
+      allow create: if isValidId(logId)
+        && isVerifiedUser()
+        && isValidSystemAuditLog(incoming())
+        && incoming().id == logId
+        && incoming().actorUid == request.auth.uid
+        && incoming().actorEmail == request.auth.token.email.lower()
+        && incoming().createdAt == request.time
+        && (isBootstrappedSuperAdmin() || isAdminDocActive(request.auth.uid));
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // 13. Registered Buyer Corporate Profiles (Client Portal — Strict Owner Isolation)
+    match /buyer_profiles/{uid} {
+      allow get: if isValidId(uid) && isVerifiedUser() && (request.auth.uid == uid || hasAdminPermission('viewRfqs'));
+      allow list: if isBootstrappedSuperAdmin() || (isVerifiedUser() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(uid)
+        && isVerifiedUser()
+        && request.auth.uid == uid
+        && isValidBuyerProfile(incoming())
+        && incoming().uid == uid
+        && incoming().email == request.auth.token.email.lower()
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(uid)
+        && isVerifiedUser()
+        && request.auth.uid == uid
+        && isValidBuyerProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'companyName', 'contactName', 'phone', 'country',
+          'preferredPort', 'taxOrRegId', 'preferredCurrency', 'updatedAt'
+        ]);
+      allow delete: if isValidId(uid) && hasAdminPermission('deleteRecords');
+    }
+  }
+}

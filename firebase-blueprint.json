@@ -1,0 +1,915 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized internal team member with role-based access control for the PetroTechnics Superadmin Console.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["superadmin", "editor", "desk_agent", "analyst"]
+        },
+        "roleId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roleName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "permissions": {
+          "type": "object"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "disabled"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "roleId", "roleName", "permissions", "status", "createdAt", "updatedAt"]
+    },
+    "RoleDefinition": {
+      "title": "RoleDefinition",
+      "description": "Superadmin-defined granular access role template with explicit module-level permission flags.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 300
+        },
+        "baseTier": {
+          "type": "string",
+          "enum": ["superadmin", "editor", "desk_agent", "analyst"]
+        },
+        "isSystem": {
+          "type": "boolean"
+        },
+        "permissions": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "description", "baseTier", "isSystem", "permissions", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Petrochemical, polymer, fertilizer, or industrial chemical export catalog item with live FOB USD/MT pricing.",
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["polymers", "fertilizers", "chemicals"]
+        },
+        "shortName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "casNumber": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "hsCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24
+        },
+        "moqMt": {
+          "type": "number"
+        },
+        "fobUsdMt": {
+          "type": "number"
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "featured": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "object"
+        },
+        "summary": {
+          "type": "object"
+        },
+        "overview": {
+          "type": "object"
+        },
+        "grades": {
+          "type": "array"
+        },
+        "specs": {
+          "type": "array"
+        },
+        "applications": {
+          "type": "array"
+        },
+        "packaging": {
+          "type": "array"
+        },
+        "loadingPorts": {
+          "type": "array"
+        },
+        "inspections": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "slug",
+        "category",
+        "shortName",
+        "formula",
+        "casNumber",
+        "hsCode",
+        "moqMt",
+        "fobUsdMt",
+        "image",
+        "featured",
+        "name",
+        "summary",
+        "overview",
+        "grades",
+        "specs",
+        "applications",
+        "packaging",
+        "loadingPorts",
+        "inspections",
+        "updatedAt"
+      ]
+    },
+    "RfqInquiry": {
+      "title": "RfqInquiry",
+      "description": "Commercial buyer Request for Quotation with tonnage, Incoterm 2020, currency valuation, and deal desk pipeline status.",
+      "type": "object",
+      "properties": {
+        "referenceId": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "productSlug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "productName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "grade": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "quantityMt": {
+          "type": "number"
+        },
+        "destination": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "incoterm": {
+          "type": "string",
+          "enum": ["FOB", "CFR", "CIF", "FCA", "CPT", "DAP"]
+        },
+        "packaging": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "inspection": {
+          "type": "string",
+          "enum": ["SGS", "Bureau Veritas", "Intertek"]
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "EUR", "AED"]
+        },
+        "estimatedUnitPrice": {
+          "type": "number"
+        },
+        "estimatedTotal": {
+          "type": "number"
+        },
+        "companyName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "contactName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 40
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["received", "reviewing", "quoted", "contracted", "archived"]
+        },
+        "deskNotes": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "buyerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "fulfillmentStage": {
+          "type": "string",
+          "enum": ["allocation", "lc_opened", "sgs_inspection", "port_loading", "in_transit", "delivered"]
+        },
+        "vesselName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "blNumber": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "portOfLoading": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "etaDate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "buyerNotice": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "referenceId",
+        "productSlug",
+        "productName",
+        "grade",
+        "quantityMt",
+        "destination",
+        "incoterm",
+        "packaging",
+        "inspection",
+        "currency",
+        "estimatedUnitPrice",
+        "estimatedTotal",
+        "companyName",
+        "contactName",
+        "email",
+        "phone",
+        "notes",
+        "status",
+        "deskNotes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MarketInsight": {
+      "title": "MarketInsight",
+      "description": "Trilingual petrochemical market research brief published to the Insights view.",
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 96,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["fertilizers", "polymers", "finance", "logistics"]
+        },
+        "categoryLabel": {
+          "type": "object"
+        },
+        "date": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24
+        },
+        "readTimeMinutes": {
+          "type": "number"
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "title": {
+          "type": "object"
+        },
+        "excerpt": {
+          "type": "object"
+        },
+        "sections": {
+          "type": "array"
+        },
+        "published": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "slug",
+        "category",
+        "categoryLabel",
+        "date",
+        "readTimeMinutes",
+        "image",
+        "title",
+        "excerpt",
+        "sections",
+        "published",
+        "updatedAt"
+      ]
+    },
+    "HistoricalPricePoint": {
+      "title": "HistoricalPricePoint",
+      "description": "Monthly Middle East FOB benchmark price record (USD/MT) feeding the Recharts historical trends dashboard.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "month": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 24
+        },
+        "sortOrder": {
+          "type": "number"
+        },
+        "urea": {
+          "type": "number"
+        },
+        "hdpe": {
+          "type": "number"
+        },
+        "pp": {
+          "type": "number"
+        },
+        "methanol": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "month", "sortOrder", "urea", "hdpe", "pp", "methanol", "updatedAt"]
+    },
+    "TradeCorridor": {
+      "title": "TradeCorridor",
+      "description": "Global petrochemical shipping corridor rendered on the interactive D3 map.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "modeCode": {
+          "type": "string",
+          "enum": ["maritime", "caspian", "overland", "gulf"]
+        },
+        "region": {
+          "type": "object"
+        },
+        "mode": {
+          "type": "object"
+        },
+        "loadingPorts": {
+          "type": "array"
+        },
+        "destinations": {
+          "type": "array"
+        },
+        "transitDays": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "commodities": {
+          "type": "array"
+        },
+        "summary": {
+          "type": "object"
+        },
+        "originPoint": {
+          "type": "object"
+        },
+        "targetPoint": {
+          "type": "object"
+        },
+        "curveControl": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "modeCode",
+        "region",
+        "mode",
+        "loadingPorts",
+        "destinations",
+        "transitDays",
+        "commodities",
+        "summary",
+        "originPoint",
+        "targetPoint",
+        "curveControl",
+        "updatedAt"
+      ]
+    },
+    "DocumentTemplate": {
+      "title": "DocumentTemplate",
+      "description": "Institutional trade document sample template (PI, B/L, SGS, FCO, COO, COA) hosted in the Secure Document Hub.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "category": {
+          "type": "string",
+          "enum": ["commercial", "shipping", "inspection"]
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "stageRef": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "issuer": {
+          "type": "object"
+        },
+        "title": {
+          "type": "object"
+        },
+        "summary": {
+          "type": "object"
+        },
+        "documentTitleEn": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "subtitleEn": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 180
+        },
+        "metadata": {
+          "type": "array"
+        },
+        "tableHeaders": {
+          "type": "array"
+        },
+        "lineItems": {
+          "type": "array"
+        },
+        "clauses": {
+          "type": "array"
+        },
+        "signatory": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "category",
+        "revision",
+        "sha256",
+        "stageRef",
+        "issuer",
+        "title",
+        "summary",
+        "documentTitleEn",
+        "subtitleEn",
+        "metadata",
+        "tableHeaders",
+        "lineItems",
+        "clauses",
+        "signatory",
+        "updatedAt"
+      ]
+    },
+    "DocumentAccessLog": {
+      "title": "DocumentAccessLog",
+      "description": "PII-isolated buyer verification audit record for Secure Document Hub access.",
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "company": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "revoked"]
+        },
+        "verifiedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["token", "company", "email", "status", "verifiedAt", "updatedAt"]
+    },
+    "VaultRevocation": {
+      "title": "VaultRevocation",
+      "description": "Non-PII revocation marker allowing instant client/download verification without exposing buyer emails.",
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 40,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "revokedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["token", "revoked", "revokedAt"]
+    },
+    "PlatformSettings": {
+      "title": "PlatformSettings",
+      "description": "Live settlement FX rates (USD, EUR, AED), Incoterm freight allowances, regional commercial desks, and FAQs.",
+      "type": "object",
+      "properties": {
+        "fxRates": {
+          "type": "object"
+        },
+        "incotermDeltas": {
+          "type": "object"
+        },
+        "regionalDesks": {
+          "type": "array"
+        },
+        "faqs": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["fxRates", "incotermDeltas", "regionalDesks", "faqs", "updatedAt"]
+    },
+    "SystemAuditLog": {
+      "title": "SystemAuditLog",
+      "description": "Append-only immutable audit trail recording administrative mutations across pricing, RFQs, roles, documents, market data, and settings.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["pricing", "catalog", "rfq", "market", "documents", "roles", "settings", "system"]
+        },
+        "action": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "critical"]
+        },
+        "targetType": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 48
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "targetLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 400
+        },
+        "changes": {
+          "type": "array"
+        },
+        "actorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "actorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "action",
+        "severity",
+        "targetType",
+        "targetId",
+        "targetLabel",
+        "summary",
+        "changes",
+        "actorUid",
+        "actorEmail",
+        "actorName",
+        "createdAt"
+      ]
+    },
+    "BuyerProfile": {
+      "title": "BuyerProfile",
+      "description": "Registered institutional buyer corporate profile linked to Firebase Auth UID for the PetroTechnics Client Portal.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "companyName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "contactName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 40
+        },
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "preferredPort": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "taxOrRegId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "preferredCurrency": {
+          "type": "string",
+          "enum": ["USD", "EUR", "AED"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "companyName",
+        "contactName",
+        "phone",
+        "country",
+        "preferredPort",
+        "taxOrRegId",
+        "preferredCurrency",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "RBAC directory for internal team operators with assigned granular RoleDefinition IDs and synced permission snapshots."
+    },
+    "/role_definitions/{roleId}": {
+      "schema": { "$ref": "#/entities/RoleDefinition" },
+      "description": "Superadmin-managed granular access level templates (e.g., Superadmin, Pricing Manager, Sales Lead, Read-Only Analyst, and custom roles)."
+    },
+    "/products/{productSlug}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Live petrochemical export catalog and FOB USD/MT benchmark pricing."
+    },
+    "/rfq_inquiries/{rfqId}": {
+      "schema": { "$ref": "#/entities/RfqInquiry" },
+      "description": "Confidential buyer RFQ pipeline and shipment fulfillment records (admin-managed, buyer-owned verified read/list, public validated create)."
+    },
+    "/market_insights/{insightSlug}": {
+      "schema": { "$ref": "#/entities/MarketInsight" },
+      "description": "Trilingual market research articles (published publicly readable, drafts superadmin-only)."
+    },
+    "/historical_prices/{priceId}": {
+      "schema": { "$ref": "#/entities/HistoricalPricePoint" },
+      "description": "Monthly Middle East FOB price series powering the Recharts volatility dashboard."
+    },
+    "/trade_corridors/{corridorId}": {
+      "schema": { "$ref": "#/entities/TradeCorridor" },
+      "description": "Global maritime, Caspian, Gulf, and overland export corridors powering the D3 map."
+    },
+    "/document_templates/{templateId}": {
+      "schema": { "$ref": "#/entities/DocumentTemplate" },
+      "description": "Institutional trade document sample templates (PI, B/L, SGS, FCO, COO, COA)."
+    },
+    "/document_access_logs/{tokenId}": {
+      "schema": { "$ref": "#/entities/DocumentAccessLog" },
+      "description": "PII-protected Document Hub verification audit log (admin-only read/list/revoke)."
+    },
+    "/vault_revocations/{tokenId}": {
+      "schema": { "$ref": "#/entities/VaultRevocation" },
+      "description": "Split-collection non-PII token revocation registry for instant download enforcement."
+    },
+    "/platform_settings/{settingKey}": {
+      "schema": { "$ref": "#/entities/PlatformSettings" },
+      "description": "Global commercial configuration (live FX rates, Incoterm deltas, regional desks, FAQs)."
+    },
+    "/system_audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/SystemAuditLog" },
+      "description": "Immutable append-only administrative audit log tracking pricing updates, RFQ status transitions, role modifications, and vault revocations."
+    },
+    "/buyer_profiles/{uid}": {
+      "schema": { "$ref": "#/entities/BuyerProfile" },
+      "description": "Registered institutional buyer account profiles for the Client Portal, strictly isolated to owner UID and authorized sales admins."
+    }
+  }
+}

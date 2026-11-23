@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan for the PetroTechnics Superadmin Dashboard and full-stack PostgreSQL migration eliminating all frontend mock data, featuring role-based access control, real-time CRUD across all 5 operational modules (Catalog & FOB Pricing, RFQ Pipeline, Insights/Price Trends/Corridors, Document Hub & Audit Logs, Roles/FX/Desks), one-time database seeding, and Vercel + Supabase PostgreSQL deployment parity.",
+  "updatedAt": "2026-11-20T10:56:22.961361421Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

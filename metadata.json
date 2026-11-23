@@ -1,0 +1,6 @@
+{
+  "name": "PetroTechnics",
+  "description": "International petrochemical, polymer, fertilizer, and industrial chemical trading and export platform (petrotechnic.co).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
